@@ -46,30 +46,31 @@ ARG APK_MIRROR_ARG
 
 RUN useradd -m -s /bin/bash appuser
 
-# Core system packages
+# Step 1: essential runtime packages (no build-essential, no mysql client)
 RUN sed -i "s@deb.debian.org@${APK_MIRROR_ARG:-mirrors.tuna.tsinghua.edu.cn}@g" /etc/apt/sources.list.d/debian.sources && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        build-essential postgresql-client default-mysql-client \
-        ca-certificates tzdata sed curl bash vim wget \
+        ca-certificates tzdata \
+        curl bash wget sed vim \
         libsqlite3-0 \
-        python3 python3-pip python3-dev libffi-dev libssl-dev \
-        gosu && \
+        python3 python3-pip \
+        gosu \
+        postgresql-client && \
     apt-get clean
 
-# Node.js (separate layer)
+# Step 2: Node.js
 RUN sed -i "s@deb.debian.org@${APK_MIRROR_ARG:-mirrors.tuna.tsinghua.edu.cn}@g" /etc/apt/sources.list.d/debian.sources && \
     apt-get update && \
     apt-get install -y --no-install-recommends nodejs npm && \
     apt-get clean
 
-# ffmpeg (large, separate layer)
+# Step 3: ffmpeg (large, needed for audio/video transcription)
 RUN sed -i "s@deb.debian.org@${APK_MIRROR_ARG:-mirrors.tuna.tsinghua.edu.cn}@g" /etc/apt/sources.list.d/debian.sources && \
     apt-get update && \
     apt-get install -y --no-install-recommends ffmpeg && \
     apt-get clean
 
-# Python tooling via Tsinghua mirror
+# Step 4: Python tooling via Tsinghua PyPI mirror
 RUN python3 -m pip install --break-system-packages \
         -i https://pypi.tuna.tsinghua.edu.cn/simple \
         --upgrade pip setuptools wheel uv && \
