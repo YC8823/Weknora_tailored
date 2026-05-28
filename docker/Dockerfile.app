@@ -1,4 +1,4 @@
-﻿# Build stage
+﻿# Build stage: compile Go binary
 FROM golang:1.24-bookworm AS builder
 
 WORKDIR /app
@@ -37,67 +37,12 @@ ENV GO_VERSION=${GO_VERSION_ARG}
 RUN --mount=type=cache,target=/go/pkg/mod make build-prod
 RUN --mount=type=cache,target=/go/pkg/mod cp -r /go/pkg/mod/github.com/yanyiwu/ /app/yanyiwu/
 
-# Final stage
-FROM debian:12.12-slim
+# Final stage: use official pre-built image, only swap the binary.
+# This avoids rebuilding apt packages from scratch in a Chinese network environment.
+FROM wechatopenai/weknora-app:${WEKNORA_VERSION:-latest}
 
-WORKDIR /app
-
-ARG APK_MIRROR_ARG
-
-RUN useradd -m -s /bin/bash appuser
-
-# Step 1: essential runtime packages (no build-essential, no mysql client)
-RUN sed -i "s@deb.debian.org@${APK_MIRROR_ARG:-mirrors.tuna.tsinghua.edu.cn}@g" /etc/apt/sources.list.d/debian.sources && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-        ca-certificates tzdata \
-        curl bash wget sed vim \
-        libsqlite3-0 \
-        python3 python3-pip \
-        gosu \
-        postgresql-client && \
-    apt-get clean
-
-# Step 2: Node.js
-RUN sed -i "s@deb.debian.org@${APK_MIRROR_ARG:-mirrors.tuna.tsinghua.edu.cn}@g" /etc/apt/sources.list.d/debian.sources && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends nodejs npm && \
-    apt-get clean
-
-# Step 3: ffmpeg (large, needed for audio/video transcription)
-RUN sed -i "s@deb.debian.org@${APK_MIRROR_ARG:-mirrors.tuna.tsinghua.edu.cn}@g" /etc/apt/sources.list.d/debian.sources && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg && \
-    apt-get clean
-
-# Step 4: Python tooling via Tsinghua PyPI mirror
-RUN python3 -m pip install --break-system-packages \
-        -i https://pypi.tuna.tsinghua.edu.cn/simple \
-        --upgrade pip setuptools wheel uv && \
-    mkdir -p /home/appuser/.local/bin && \
-    ln -sf /usr/local/bin/uv /home/appuser/.local/bin/uv && \
-    ln -sf /usr/local/bin/uvx /home/appuser/.local/bin/uvx && \
-    chown -R appuser:appuser /home/appuser && \
-    chmod +x /usr/local/bin/uvx
-
-RUN mkdir -p /data/files && \
-    chown -R appuser:appuser /app /data/files
-
-COPY --from=builder /go/bin/migrate /usr/local/bin/
-COPY --from=builder /app/yanyiwu/ /go/pkg/mod/github.com/yanyiwu/
-
-COPY --from=builder /app/config ./config
-COPY --from=builder /app/scripts ./scripts
-COPY --from=builder /app/migrations ./migrations
-COPY --from=builder /app/dataset/samples ./dataset/samples
-COPY --from=builder /app/skills/preloaded ./skills/preloaded
-COPY --from=builder /app/skills/preloaded ./skills/_builtin
-COPY --from=builder /root/.duckdb /home/appuser/.duckdb
-COPY --from=builder /app/WeKnora .
-
-COPY --from=builder /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
-
-RUN chmod +x ./scripts/*.sh
+# Overwrite the binary with our custom-built version (contains vision-augment feature)
+COPY --from=builder /app/WeKnora /app/WeKnora
 
 EXPOSE 8080
 
