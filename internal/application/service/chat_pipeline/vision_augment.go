@@ -49,7 +49,17 @@ func (p *PluginVisionAugment) OnEvent(
 	chatManage *types.ChatManage,
 	next func() *PluginError,
 ) *PluginError {
-	if !chatManage.ChatModelSupportsVision || len(chatManage.MergeResult) == 0 {
+	pipelineInfo(ctx, "VisionAugment", "enter", map[string]interface{}{
+		"supports_vision": chatManage.ChatModelSupportsVision,
+		"merge_result_cnt": len(chatManage.MergeResult),
+	})
+
+	if !chatManage.ChatModelSupportsVision {
+		pipelineInfo(ctx, "VisionAugment", "skip", map[string]interface{}{"reason": "model_no_vision"})
+		return next()
+	}
+	if len(chatManage.MergeResult) == 0 {
+		pipelineInfo(ctx, "VisionAugment", "skip", map[string]interface{}{"reason": "no_merge_result"})
 		return next()
 	}
 
@@ -72,6 +82,10 @@ func (p *PluginVisionAugment) OnEvent(
 	}
 
 	if len(knowledgeRefs) == 0 {
+		pipelineInfo(ctx, "VisionAugment", "skip", map[string]interface{}{
+			"reason":    "no_image_refs_in_chunks",
+			"chunk_cnt": len(chatManage.MergeResult),
+		})
 		return next()
 	}
 
