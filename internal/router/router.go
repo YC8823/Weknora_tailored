@@ -209,6 +209,8 @@ func RegisterKnowledgeRoutes(r *gin.RouterGroup, handler *handler.KnowledgeHandl
 		k.GET("/:id/download", handler.DownloadKnowledgeFile)
 		// 预览知识文件（内联显示，返回正确 Content-Type）
 		k.GET("/:id/preview", handler.PreviewKnowledgeFile)
+		// 获取知识文档目录下的子文件（如图片等）
+		k.GET("/:id/file/*path", handler.ServeKnowledgeFile)
 		// 更新图像分块信息
 		k.PUT("/image/:id/:chunk_id", handler.UpdateImageInfo)
 		// 批量更新知识标签

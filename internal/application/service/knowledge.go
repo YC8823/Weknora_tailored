@@ -2578,6 +2578,39 @@ func (s *knowledgeService) GetKnowledgeFile(ctx context.Context, id string) (io.
 	return file, knowledge.FileName, nil
 }
 
+// GetKnowledgeSubFile retrieves a figure or sub-file relative to the knowledge document's directory.
+func (s *knowledgeService) GetKnowledgeSubFile(ctx context.Context, id string, relPath string) (io.ReadCloser, string, error) {
+	if strings.Contains(relPath, "..") {
+		return nil, "", fmt.Errorf("invalid path")
+	}
+
+	tenantID := ctx.Value(types.TenantIDContextKey).(uint64)
+	knowledge, err := s.repo.GetKnowledgeByID(ctx, tenantID, id)
+	if err != nil {
+		return nil, "", err
+	}
+
+	if knowledge.FilePath == "" {
+		return nil, "", fmt.Errorf("knowledge has no file path")
+	}
+
+	idx := strings.LastIndex(knowledge.FilePath, "/")
+	if idx < 0 {
+		return nil, "", fmt.Errorf("cannot determine directory prefix from file path")
+	}
+	fullPath := knowledge.FilePath[:idx+1] + relPath
+
+	kb, _ := s.kbService.GetKnowledgeBaseByID(ctx, knowledge.KnowledgeBaseID)
+	file, err := s.resolveFileServiceForPath(ctx, kb, fullPath).GetFile(ctx, fullPath)
+	if err != nil {
+		return nil, "", err
+	}
+
+	parts := strings.Split(relPath, "/")
+	filename := parts[len(parts)-1]
+	return file, filename, nil
+}
+
 func (s *knowledgeService) UpdateKnowledge(ctx context.Context, knowledge *types.Knowledge) error {
 	record, err := s.repo.GetKnowledgeByID(ctx, ctx.Value(types.TenantIDContextKey).(uint64), knowledge.ID)
 	if err != nil {

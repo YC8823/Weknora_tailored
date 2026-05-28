@@ -874,6 +874,51 @@ func (h *KnowledgeHandler) PreviewKnowledgeFile(c *gin.Context) {
 	})
 }
 
+// ServeKnowledgeFile serves a figure or sub-file stored alongside a knowledge document.
+// The wildcard *path is appended to the knowledge document's directory prefix.
+func (h *KnowledgeHandler) ServeKnowledgeFile(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	id := secutils.SanitizeForLog(c.Param("id"))
+	if id == "" {
+		c.Error(errors.NewBadRequestError("Knowledge ID cannot be empty"))
+		return
+	}
+
+	relPath := strings.TrimPrefix(c.Param("path"), "/")
+	if relPath == "" {
+		c.Error(errors.NewBadRequestError("File path cannot be empty"))
+		return
+	}
+
+	_, effCtx, err := h.resolveKnowledgeAndValidateKBAccess(c, id, types.OrgRoleViewer)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	file, filename, err := h.kgService.GetKnowledgeSubFile(effCtx, id, relPath)
+	if err != nil {
+		logger.ErrorWithFields(ctx, err, nil)
+		c.Error(errors.NewNotFoundError("File not found").WithDetails(err.Error()))
+		return
+	}
+	defer file.Close()
+
+	contentType := mimeTypeByExt(filename)
+	c.Header("Content-Type", contentType)
+	c.Header("Content-Disposition", mime.FormatMediaType("inline", map[string]string{"filename": filename}))
+	c.Header("Cache-Control", "private, max-age=3600")
+
+	c.Stream(func(w io.Writer) bool {
+		if _, err := io.Copy(w, file); err != nil {
+			logger.Errorf(ctx, "Failed to stream file: %v", err)
+			return false
+		}
+		return false
+	})
+}
+
 // GetKnowledgeBatchRequest defines parameters for batch knowledge retrieval
 type GetKnowledgeBatchRequest struct {
 	IDs     []string `form:"ids" binding:"required"` // List of knowledge IDs

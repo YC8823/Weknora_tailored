@@ -324,7 +324,10 @@ export async function hydrateProtectedFileImages(root: ParentNode | null | undef
       ? `/files?${new URLSearchParams({ file_path: sourceURL }).toString()}`
       : sourceURL;
 
-    if (!requestURL.startsWith('/files?') || !requestURL.includes('file_path=')) {
+    const isAllowed =
+      (requestURL.startsWith('/files?') && requestURL.includes('file_path=')) ||
+      requestURL.startsWith('/api/');
+    if (!isAllowed) {
       img.dataset.authHydrated = '0';
       return;
     }
