@@ -180,6 +180,17 @@ const checkImage = (url) => {
   });
 };
 renderer.image = function ({href, title, text}) {
+  // Relative figures/ paths are stored on the server; serve via authenticated API.
+  if (href && /^figures\//.test(href) && props.details?.id) {
+    const apiSrc = `/api/v1/knowledge/${props.details.id}/file/${href}`;
+    const safeAlt = (text || '').replace(/"/g, '&quot;');
+    const safeTitle = title ? ` title="${title.replace(/"/g, '&quot;')}"` : '';
+    return `<figure>
+                <img data-protected-src="${apiSrc}" alt="${safeAlt}"${safeTitle} style="max-width:100%;height:auto;">
+                <figcaption style="text-align: left;">${text || ''}</figcaption>
+            </figure>`;
+  }
+
   if (!isValidImageURL(href)) {
     return `<p>${t('error.invalidImageLink')}</p>`;
   }
