@@ -43,6 +43,7 @@ FROM wechatopenai/weknora-app:${WEKNORA_VERSION:-latest}
 
 # Overwrite the binary with our custom-built version (contains vision-augment feature)
 COPY --from=builder /app/WeKnora /app/WeKnora
+COPY --from=builder /app/yanyiwu/ /go/pkg/mod/github.com/yanyiwu/
 
 EXPOSE 8080
 

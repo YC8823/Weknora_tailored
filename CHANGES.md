@@ -56,6 +56,23 @@ docker compose logs app | Select-String "VisionAugment"
 
 ---
 
+## [2026-06-04] 修复 Docker 构建（国内网络 Go 包 + DuckDB 扩展下载超时）
+
+**文件**：`docker-compose.yml`、`.env`
+**类型**：构建修复
+
+从远程仓库拉取最新代码后重新构建，出现两处网络超时：
+
+1. **Go 依赖下载超时**：`Dockerfile.app` 中声明了 `GOPROXY_ARG` build arg，但 `docker-compose.yml` 未传入，导致 Go 使用默认 `proxy.golang.org`，国内超时。
+   - 修复：在 `docker-compose.yml` 的 app build args 加 `GOPROXY_ARG=${GOPROXY_ARG:-https://goproxy.cn,direct}`
+
+2. **DuckDB spatial 扩展下载超时**：`cmd/download/duckdb/duckdb.go` 执行 `INSTALL spatial` 时从 `extensions.duckdb.org` 下载，国内无法访问。
+   - 修复：在 `docker-compose.yml` 的 app build args 加 `HTTP_PROXY` / `HTTPS_PROXY`，透传宿主机代理给 Docker BuildKit；在 `.env` 中配置 `HTTP_PROXY=http://host.docker.internal:7890`
+
+**前提**：宿主机代理客户端（如 Clash）需开启「允许局域网连接」。
+
+---
+
 ## [2026-06-04] 摄入期支持 PPT/MD base64 图片入库
 
 **提交**：`caefdfb`

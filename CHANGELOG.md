@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### 🔧 Build
+
+- Fixed Docker build failures in Chinese network environments: added `GOPROXY_ARG` (defaults to `goproxy.cn`) and `HTTP_PROXY`/`HTTPS_PROXY` build args to `docker-compose.yml` app service, enabling Go module proxy and host proxy passthrough for DuckDB spatial extension download
+
 ## [0.4.0] - 2026-04-14
 
 ### 🚀 New Features
