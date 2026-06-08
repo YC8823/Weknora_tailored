@@ -146,6 +146,25 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  # reranker:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/Dockerfile.reranker
+  #   container_name: WeKnora-reranker
+  #   ports:
+  #     - "${RERANKER_PORT:-8001}:8001"
+  #   volumes:
+  #     # 模型权重挂载到容器，不打包进镜像（体积太大）
+  #     - ${RERANKER_MODEL_PATH:-./models/rerank_model}:/app/model_weights:ro
+  #   environment:
+  #     - RERANKER_MODEL_PATH=/app/model_weights
+  #   networks:
+  #     - WeKnora-network
+  #   restart: unless-stopped
+  #   profiles:
+  #     - reranker
+  #     - full
+
   # Sandbox 镜像：仅用于 build/pull，非常驻服务；app 执行 Skills 时按需 docker run 该镜像，用毕即释
   sandbox:
     image: wechatopenai/weknora-sandbox:${WEKNORA_VERSION:-latest}

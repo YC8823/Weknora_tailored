@@ -43,7 +43,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"使用的设备: {device}")
 try:
     # 请确保这里的路径是正确的
-    model_path = '/data1/home/lwx/work/Download/rerank_model_weight'
+    model_path = 'C:\\data\\rerank_model'
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     model = AutoModelForSequenceClassification.from_pretrained(model_path)
     model.to(device)
@@ -118,4 +118,4 @@ def read_root():
 
 # --- 5. 启动服务 ---
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
