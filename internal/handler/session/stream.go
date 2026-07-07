@@ -90,11 +90,21 @@ func (h *Handler) ContinueStream(c *gin.Context) {
 	}
 
 	if len(events) == 0 {
-		logger.Warnf(ctx, "No events found in stream, session ID: %s, message ID: %s", sessionID, messageID)
-		c.JSON(http.StatusNotFound, gin.H{
-			"success": false,
-			"error":   "No stream events found",
+		// Stream events are gone (e.g. container restart cleared in-memory StreamManager).
+		// Mark the message as completed so the frontend won't attempt to resume it again.
+		logger.Warnf(ctx, "No stream events found for message %s (possible container restart), marking as completed", messageID)
+		message.IsCompleted = true
+		if updateErr := h.messageService.UpdateMessage(ctx, message); updateErr != nil {
+			logger.Warnf(ctx, "Failed to mark orphaned message as completed: %v", updateErr)
+		}
+		// Send a synthetic complete event so the frontend exits its loading state gracefully.
+		setSSEHeaders(c)
+		c.SSEvent("message", &types.StreamResponse{
+			ID:           message.RequestID,
+			ResponseType: "complete",
+			Done:         true,
 		})
+		c.Writer.Flush()
 		return
 	}
 
