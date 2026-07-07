@@ -43,15 +43,15 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"使用的设备: {device}")
 try:
     # 请确保这里的路径是正确的
-    model_path = 'C:\\data\\rerank_model'
+    model_path = 'C:\\AI\\hf_models\\bge-reranker-v2-m3'
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     model = AutoModelForSequenceClassification.from_pretrained(model_path)
     model.to(device)
     model.eval()
     print("模型加载成功！")
 except Exception as e:
-    print(f"模型加载失败: {e}")
-    # 在测试环境中，如果模型加载失败，可以考虑退出以避免运行一个无效的服务
+    import traceback
+    traceback.print_exc()
     exit()
 
 # --- 3. 创建FastAPI应用 ---
@@ -118,4 +118,4 @@ def read_root():
 
 # --- 5. 启动服务 ---
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=8002)
